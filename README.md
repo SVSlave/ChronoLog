@@ -1,1 +1,1 @@
-# ChronoLog - An application for tracking, analyzing and show analytics on your study/work sessions 
+# ChronoLog - An application for tracking, analyzing and showing analytics on your study/work sessions 
