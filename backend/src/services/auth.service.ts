@@ -1,48 +1,50 @@
-import {prisma} from '../lib/prisma';
-import bcrypt from 'bcryptjs';
-import { signToken } from '../lib/jwt';
+import { prisma } from "../lib/prisma";
+import bcrypt from "bcryptjs";
+import { signToken } from "../lib/jwt";
+import { ApplicationError } from "../lib/error";
 
-export class AuthService {
+export async function registerUser(
+  email: string,
+  password: string,
+  userName: string,
+) {
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    async registerUser(email: string, password: string, userName: string) {
+  const user = await prisma.user.create({
+    data: { email, password: hashedPassword, userName },
+    select: {
+      id: true,
+      email: true,
+      userName: true,
+      createdAt: true,
+    },
+  });
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+  return user;
+}
 
-        const user = await prisma.users.create({
-            data: { email, password: hashedPassword, userName },
-            select: {
-                id: true,
-                email: true,
-                userName: true,
-                createdAt: true,
-            },
-        });
+export async function login(identifier: string, password: string) {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier }, { userName: identifier }],
+    },
+  });
 
-        return user;
-    }
+  if (!user) {
+    throw new ApplicationError("User not found", "INVALID_CREDENTIALS", 401);
+  }
 
-    async login(identifier: string, password: string) {
-        const user = await prisma.users.findFirstOrThrow({
-            where: { 
-                OR: [
-                    { email: identifier },
-                    { userName: identifier }
-                ]
-            }
-        });
+  const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        if(!user){
-            throw new Error('Invalid credentials');
-        }
+  if (!isPasswordValid) {
+    throw new ApplicationError(
+      "Invalid credentials",
+      "INVALID_CREDENTIALS",
+      401,
+    );
+  }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password); 
+  const token = signToken({ id: user.id, email: user.email });
 
-        if(!isPasswordValid){
-            throw new Error('Invalid credentials');
-        }
-
-        const token = signToken({id: user.id, email: user.email});
-
-        return { token, user: { id: user.id, email: user.email,} };
-    }
+  return { token };
 }
