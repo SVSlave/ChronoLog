@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { ApplicationError } from "../lib/error";
 
 export function errorMiddleware(
-  err: ErrorRequestHandler,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction,
@@ -13,7 +13,8 @@ export function errorMiddleware(
       error: {
         message: err.message,
         code: err.errorCode,
-      },
+        ...(err.details ? { details: err.details } : {}),
+      },    
     });
   }
   return res.status(500).json({
